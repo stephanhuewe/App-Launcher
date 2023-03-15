@@ -244,7 +244,9 @@ namespace App_Launcher
 
 			itemLayout.Children.Add(itemTitle);
 			itemLayout.Children.Add(itemPath);
-			listItem.Content = itemLayout;
+            //System.Drawing.Image i = System.Drawing.Image.FromFile("app-launcher-icon.jpg");
+            /*itemLayout.Children.Add(i)*/;
+            listItem.Content = itemLayout;
 			listItem.ContextMenu = contextMenu;
 
 			GC.Collect();

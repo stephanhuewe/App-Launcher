@@ -7,14 +7,14 @@ namespace App_Launcher
 	/// <summary>
 	/// Interaction logic for CategoryPrompt.xaml
 	/// </summary>
-	public partial class ProgramPrompt : Window
-	{
+	public partial class ProgramPrompt
+    {
 		public ProgramPrompt()
 		{
 			InitializeComponent();
 		}
 
-		public bool ConfirmClicked { get; private set; } = false;
+		public bool ConfirmClicked { get; private set; }
 
 		public (string, string) GetProgram()
 		{
@@ -26,10 +26,10 @@ namespace App_Launcher
 			return !string.IsNullOrEmpty(ProgramName.Text) && !string.IsNullOrEmpty(ProgramPath.Text);
 		}
 
-		public void SetDefault(string Name, string Path)
+		public void SetDefault(string name, string path)
 		{
-			ProgramName.Text = Name;
-			ProgramPath.Text = Path;
+			ProgramName.Text = name;
+			ProgramPath.Text = path;
 		}
 
 		private void ConfirmProgram(object sender, MouseButtonEventArgs e)

@@ -6,14 +6,14 @@ namespace App_Launcher
 	/// <summary>
 	/// Interaction logic for CategoryPrompt.xaml
 	/// </summary>
-	public partial class CategoryPrompt : Window
-	{
+	public partial class CategoryPrompt
+    {
 		public CategoryPrompt()
 		{
 			InitializeComponent();
 		}
 
-		public bool ConfirmClicked { get; private set; } = false;
+		public bool ConfirmClicked { get; private set; }
 
 		public string GetCategoryName()
 		{
@@ -25,9 +25,9 @@ namespace App_Launcher
 			return !string.IsNullOrEmpty(CategoryName.Text);
 		}
 
-		public void SetDefault(string Title)
+		public void SetDefault(string title)
 		{
-			CategoryName.Text = Title;
+			CategoryName.Text = title;
 		}
 
 		private void ConfirmCategory(object sender, MouseButtonEventArgs e)

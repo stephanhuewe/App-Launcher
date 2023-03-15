@@ -16,8 +16,8 @@ namespace App_Launcher
 	/// <summary>
 	/// Interaction logic for MainWindow.xaml
 	/// </summary>
-	public partial class MainWindow : Window
-	{
+	public partial class MainWindow
+    {
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -29,7 +29,7 @@ namespace App_Launcher
 		[DllImport("user32.dll")]
 		private static extern int SendMessage(IntPtr hwnd, int msg, int wp, int lp);
 
-		private Ini config = null;
+		private Ini _config;
 
 		private void DragWindow(object sender, MouseButtonEventArgs e)
 		{
@@ -73,7 +73,7 @@ namespace App_Launcher
 		{
 			if (e.LeftButton == MouseButtonState.Pressed)
 			{
-				Process.Start("explorer.exe", Path.GetDirectoryName(config.Name));
+				Process.Start("explorer.exe", Path.GetDirectoryName(_config.Name) ?? string.Empty);
 			}
 		}
 
@@ -85,7 +85,7 @@ namespace App_Launcher
 				{
 					Owner = this,
 				};
-				categoryPrompt.Closed += (s, ee) =>
+				categoryPrompt.Closed += (_, _) =>
 				{
 					if (categoryPrompt.PromptSucceeded() && categoryPrompt.ConfirmClicked)
 					{
@@ -93,23 +93,23 @@ namespace App_Launcher
 						ListBoxItem categoryItem = CreateCategory(categoryName);
 
 						Categories.Items.Add(categoryItem);
-						programs.Add(categoryItem, new List<ListBoxItem>());
+						_programs.Add(categoryItem, new List<ListBoxItem>());
 
-						string configInfo = string.Empty;
-						using (StreamReader reader = new StreamReader(config.Name))
+						string configInfo;
+						using (StreamReader reader = new StreamReader(_config.Name))
 						{
 							configInfo = reader.ReadToEnd();
 							reader.Close();
 						}
-						using (StreamWriter writer = new StreamWriter(config.Name))
+						using (StreamWriter writer = new StreamWriter(_config.Name))
 						{
 							writer.WriteLine($"{configInfo}\n[{categoryName}]");
 							writer.Close();
 						}
 
-						categoryItem.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(SelectCategory);
+						categoryItem.PreviewMouseLeftButtonDown += SelectCategory;
 
-						currentCategory = categoryItem;
+						_currentCategory = categoryItem;
 						LoadPrograms();
 					}
 					else
@@ -130,7 +130,7 @@ namespace App_Launcher
 				{
 					Owner = this,
 				};
-				programPrompt.Closed += (s, ee) =>
+				programPrompt.Closed += (_, _) =>
 				{
 					if (programPrompt.PromptSucceeded() && programPrompt.ConfirmClicked)
 					{
@@ -138,13 +138,13 @@ namespace App_Launcher
 						ListBoxItem programItem = CreateItem(program.Item1, program.Item2);
 
 						Programs.Items.Add(programItem);
-						List<ListBoxItem> programs = this.programs[currentCategory];
+						List<ListBoxItem> programs = this._programs[_currentCategory];
 						programs.Add(programItem);
-						this.programs[currentCategory] = programs;
+						this._programs[_currentCategory] = programs;
 
-						config.SetValue(((TextBlock)currentCategory.Content).Text, program.Item1, program.Item2);
+						_config.SetValue(((TextBlock)_currentCategory.Content).Text, program.Item1, program.Item2);
 
-						programItem.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(SelectProgram);
+						programItem.PreviewMouseLeftButtonDown += SelectProgram;
 					}
 					else
 					{
@@ -174,7 +174,7 @@ namespace App_Launcher
 			}
 		}
 
-		private ListBoxItem CreateItem(string Title, string Path)
+		private ListBoxItem CreateItem(string title, string path)
 		{
 			ListBoxItem listItem = new ListBoxItem();
 			Grid itemLayout = new Grid();
@@ -190,12 +190,12 @@ namespace App_Launcher
 			itemLayout.RowDefinitions.Add(row1);
 			itemLayout.RowDefinitions.Add(row2);
 
-			itemTitle.Text = Title;
+			itemTitle.Text = title;
 			itemTitle.FontFamily = new FontFamily("Segoe UI");
 			itemTitle.FontSize = 14;
 			itemTitle.VerticalAlignment = VerticalAlignment.Center;
 
-			itemPath.Text = Path;
+			itemPath.Text = path;
 			itemPath.SetValue(Grid.RowProperty, 1);
 			itemPath.FontFamily = new FontFamily("Segoe UI");
 			itemPath.FontSize = 11;
@@ -209,11 +209,11 @@ namespace App_Launcher
 			MenuItem modifyItem = new MenuItem();
 			MenuItem removeItem = new MenuItem();
 
-			modifyItem.PreviewMouseLeftButtonDown += (s, e) =>
+			modifyItem.PreviewMouseLeftButtonDown += (_, _) =>
 			{
 				ModifyProgram(listItem);
 			};
-			modifyItem.Loaded += (s, e) =>
+			modifyItem.Loaded += (_, _) =>
 			{
 				modifyItem.Header = $"Modify '{itemTitle.Text}'";
 			};
@@ -221,17 +221,17 @@ namespace App_Launcher
 			modifyItem.FontSize = 12;
 			modifyItem.Cursor = Cursors.Hand;
 
-			removeItem.PreviewMouseLeftButtonDown += (s, e) =>
+			removeItem.PreviewMouseLeftButtonDown += (_, _) =>
 			{
-				List<ListBoxItem> programs = this.programs[currentCategory];
+				List<ListBoxItem> programs = this._programs[_currentCategory];
 				programs.Remove(listItem);
 
-				this.programs[currentCategory] = programs;
+				this._programs[_currentCategory] = programs;
 				Programs.Items.Remove(listItem);
 
-				config.RemoveEntry(((TextBlock)currentCategory.Content).Text, itemTitle.Text);
+				_config.RemoveEntry(((TextBlock)_currentCategory.Content).Text, itemTitle.Text);
 			};
-			removeItem.Loaded += (s, e) =>
+			removeItem.Loaded += (_, _) =>
 			{
 				removeItem.Header = $"Remove '{itemTitle.Text}'";
 			};
@@ -244,8 +244,12 @@ namespace App_Launcher
 
 			itemLayout.Children.Add(itemTitle);
 			itemLayout.Children.Add(itemPath);
-            //System.Drawing.Image i = System.Drawing.Image.FromFile("app-launcher-icon.jpg");
-            /*itemLayout.Children.Add(i)*/;
+			//itemLayout.Children.Add(itemPath);
+
+            //BitmapImage myBitmapImage = new BitmapImage();
+            //InlineUIContainer c = new InlineUIContainer(myBitmapImage);
+            //itemLayout.Children.Add(c);
+
             listItem.Content = itemLayout;
 			listItem.ContextMenu = contextMenu;
 
@@ -254,7 +258,7 @@ namespace App_Launcher
 			return listItem;
 		}
 
-		private ListBoxItem CreateCategory(string Title)
+		private ListBoxItem CreateCategory(string title)
 		{
 			ListBoxItem listItem = new ListBoxItem();
 			TextBlock itemTitle = new TextBlock();
@@ -271,11 +275,11 @@ namespace App_Launcher
 			MenuItem modifyItem = new MenuItem();
 			MenuItem removeItem = new MenuItem();
 
-			modifyItem.PreviewMouseLeftButtonDown += (s, e) =>
+			modifyItem.PreviewMouseLeftButtonDown += (_, _) =>
 			{
 				ModifyCategory(listItem);
 			};
-			modifyItem.Loaded += (s, e) =>
+			modifyItem.Loaded += (_, _) =>
 			{
 				modifyItem.Header = $"Modify '{itemTitle.Text}'";
 			};
@@ -283,38 +287,38 @@ namespace App_Launcher
 			modifyItem.FontSize = 12;
 			modifyItem.Cursor = Cursors.Hand;
 
-			removeItem.PreviewMouseLeftButtonDown += (s, e) =>
+			removeItem.PreviewMouseLeftButtonDown += (_, _) =>
 			{
-				programs.Remove(listItem);
+				_programs.Remove(listItem);
 				Categories.Items.Remove(listItem);
 
-				currentCategory = (ListBoxItem)Categories.Items[0];
+				_currentCategory = (ListBoxItem)Categories.Items[0];
 				LoadPrograms();
 
-				config.RemoveSection(itemTitle.Text);
+				_config.RemoveSection(itemTitle.Text);
 
-				File.Delete(config.Name);
-				File.Create(config.Name).Close();
+				File.Delete(_config.Name);
+				File.Create(_config.Name).Close();
 
-				foreach (ListBoxItem category in programs.Keys)
+				foreach (ListBoxItem category in _programs.Keys)
 				{
 					string section = ((TextBlock)category.Content).Text;
 
-					foreach (ListBoxItem program in programs[category])
+					foreach (ListBoxItem program in _programs[category])
 					{
 						string name = ((TextBlock)((Grid)program.Content).Children[0]).Text;
 						string path = ((TextBlock)((Grid)program.Content).Children[1]).Text;
 
-						config.SetValue(section, name, path);
+						_config.SetValue(section, name, path);
 					}
 
-					string currentIni = File.ReadAllText(config.Name);
-					currentIni += category == programs.Keys.ElementAt(programs.Keys.Count - 1) ? "" : "\n";
+					string currentIni = File.ReadAllText(_config.Name);
+					currentIni += category == _programs.Keys.ElementAt(_programs.Keys.Count - 1) ? "" : "\n";
 
-					File.WriteAllText(config.Name, currentIni);
+					File.WriteAllText(_config.Name, currentIni);
 				}
 			};
-			removeItem.Loaded += (s, e) =>
+			removeItem.Loaded += (_, _) =>
 			{
 				removeItem.Header = $"Remove '{itemTitle.Text}'";
 			};
@@ -325,7 +329,7 @@ namespace App_Launcher
 			contextMenu.Items.Add(modifyItem);
 			contextMenu.Items.Add(removeItem);
 
-			itemTitle.Text = Title;
+			itemTitle.Text = title;
 			listItem.Content = itemTitle;
 			listItem.ContextMenu = contextMenu;
 
@@ -334,14 +338,14 @@ namespace App_Launcher
 			return listItem;
 		}
 
-		private Dictionary<ListBoxItem, List<ListBoxItem>> programs = new Dictionary<ListBoxItem, List<ListBoxItem>>();
-		private ListBoxItem currentCategory = null;
+		private readonly Dictionary<ListBoxItem, List<ListBoxItem>> _programs = new Dictionary<ListBoxItem, List<ListBoxItem>>();
+		private ListBoxItem _currentCategory;
 
 		private void LoadPrograms()
 		{
 			Programs.Items.Clear();
 
-			foreach (ListBoxItem program in programs[currentCategory])
+			foreach (ListBoxItem program in _programs[_currentCategory])
 			{
 				Programs.Items.Add(program);
 			}
@@ -369,31 +373,31 @@ namespace App_Launcher
 				}
 			}
 
-			config = new Ini(Environment.CurrentDirectory + "\\config.ini");
+			_config = new Ini(Environment.CurrentDirectory + "\\config.ini");
 
-			string[] categories = config.GetSectionNames();
+			string[] categories = _config.GetSectionNames();
 
 			foreach (string category in categories)
 			{
 				ListBoxItem categoryItem = CreateCategory(category);
-				string[] programs = config.GetEntryNames(category);
+				string[] programs = _config.GetEntryNames(category);
 				List<ListBoxItem> programItems = new List<ListBoxItem>();
 
-				categoryItem.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(SelectCategory);
+				categoryItem.PreviewMouseLeftButtonDown += SelectCategory;
 
 				foreach (string program in programs)
 				{
-					ListBoxItem programItem = CreateItem(program, config.GetValue(category, program).ToString());
-					programItem.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(SelectProgram);
+					ListBoxItem programItem = CreateItem(program, _config.GetValue(category, program).ToString());
+					programItem.PreviewMouseLeftButtonDown += SelectProgram;
 
 					programItems.Add(programItem);
 				}
 
-				this.programs.Add(categoryItem, programItems);
+				this._programs.Add(categoryItem, programItems);
 				Categories.Items.Add(categoryItem);
 			}
 
-			currentCategory = programs.Keys.ElementAt(0);
+			_currentCategory = _programs.Keys.ElementAt(0);
 			LoadPrograms();
 		}
 
@@ -416,7 +420,7 @@ namespace App_Launcher
 		{
 			if (e.LeftButton == MouseButtonState.Pressed)
 			{
-				currentCategory = (ListBoxItem)sender;
+				_currentCategory = (ListBoxItem)sender;
 
 				LoadPrograms();
 			}
@@ -433,35 +437,35 @@ namespace App_Launcher
 				Owner = this,
 			};
 			programPrompt.SetDefault(name, path);
-			programPrompt.Closed += (s, ee) =>
+			programPrompt.Closed += (_, _) =>
 			{
 				if (programPrompt.PromptSucceeded() && programPrompt.ConfirmClicked)
 				{
 					(string, string) program = programPrompt.GetProgram();
 					ListBoxItem programItem = CreateItem(program.Item1, program.Item2);
 
-					List<ListBoxItem> programs = this.programs[currentCategory];
+					List<ListBoxItem> programs = this._programs[_currentCategory];
 
 					int programIndex = 0;
 					foreach (ListBoxItem tempItem in programs)
 					{
-						string name_ = ((TextBlock)((Grid)tempItem.Content).Children[0]).Text;
-						string path_ = ((TextBlock)((Grid)tempItem.Content).Children[1]).Text;
+						string nameFromItem = ((TextBlock)((Grid)tempItem.Content).Children[0]).Text;
+						string pathFromItem = ((TextBlock)((Grid)tempItem.Content).Children[1]).Text;
 
-						if (name_ == name && path_ == path)
+						if (nameFromItem == name && pathFromItem == path)
 						{
 							programIndex = programs.IndexOf(tempItem);
 						}
 					}
 
-					ChangeEntryName(config, ((TextBlock)currentCategory.Content).Text, name, program.Item1);
-					config.SetValue(((TextBlock)currentCategory.Content).Text, program.Item1, program.Item2);
+					ChangeEntryName(_config, ((TextBlock)_currentCategory.Content).Text, name, program.Item1);
+					_config.SetValue(((TextBlock)_currentCategory.Content).Text, program.Item1, program.Item2);
 
 					programs[programIndex] = programItem;
-					this.programs[currentCategory] = programs;
+					this._programs[_currentCategory] = programs;
 					LoadPrograms();
 
-					programItem.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(SelectProgram);
+					programItem.PreviewMouseLeftButtonDown += SelectProgram;
 				}
 				else
 				{
@@ -481,14 +485,14 @@ namespace App_Launcher
 				Owner = this,
 			};
 			categoryPrompt.SetDefault(title);
-			categoryPrompt.Closed += (s, ee) =>
+			categoryPrompt.Closed += (_, _) =>
 			{
 				if (categoryPrompt.PromptSucceeded() && categoryPrompt.ConfirmClicked)
 				{
 					string categoryName = categoryPrompt.GetCategoryName();
 
-					string iniConfig = string.Empty;
-					using (StreamReader reader = new StreamReader(config.Name))
+					string iniConfig;
+					using (StreamReader reader = new StreamReader(_config.Name))
 					{
 						iniConfig = reader.ReadToEnd();
 						iniConfig = iniConfig.Replace($"[{title}]", $"[{categoryName}]");
@@ -496,20 +500,20 @@ namespace App_Launcher
 						reader.Close();
 					}
 
-					File.Delete(config.Name);
-					File.Create(config.Name).Close();
+					File.Delete(_config.Name);
+					File.Create(_config.Name).Close();
 
-					using (StreamWriter writer = new StreamWriter(config.Name))
+					using (StreamWriter writer = new StreamWriter(_config.Name))
 					{
 						writer.Write(iniConfig);
 					}
 
 					List<(ListBoxItem, List<ListBoxItem>)> tempPrograms = new List<(ListBoxItem, List<ListBoxItem>)>();
 
-					foreach (ListBoxItem category in programs.Keys.ToArray())
+					foreach (ListBoxItem category in _programs.Keys.ToArray())
 					{
-						tempPrograms.Add((category, programs[category]));
-						programs.Remove(category);
+						tempPrograms.Add((category, _programs[category]));
+						_programs.Remove(category);
 					}
 
 					foreach ((ListBoxItem, List<ListBoxItem>) programSet in tempPrograms)
@@ -525,7 +529,7 @@ namespace App_Launcher
 
 						}
 
-						programs.Add(tempSet.Item1, tempSet.Item2);
+						_programs.Add(tempSet.Item1, tempSet.Item2);
 					}
 
 					((TextBlock)((ListBoxItem)sender).Content).Text = categoryName;
@@ -547,13 +551,13 @@ namespace App_Launcher
 
 		private void ChangeEntryName(Ini config, string section, string entry, string newEntry)
 		{
-			foreach (string entry_ in config.GetEntryNames(section))
+			foreach (string s in config.GetEntryNames(section))
 			{
-				bool newEntry_ = entry_ == entry;
-				string value = config.GetValue(section, entry_).ToString();
+				bool comparison = s == entry;
+				string value = config.GetValue(section, s).ToString();
 
-				config.RemoveEntry(section, entry_);
-				config.SetValue(section, newEntry_ ? newEntry : entry_, value);
+				config.RemoveEntry(section, s);
+				config.SetValue(section, comparison ? newEntry : s, value);
 			}
 		}
 	}
